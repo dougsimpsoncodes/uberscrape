@@ -1,0 +1,13 @@
+{
+  "name": "string",
+  "price": "number",
+  "brand": "string",
+  "description": "string",
+  "rating": "number",
+  "reviews_count": "number",
+  "in_stock": "boolean",
+  "sku": "string",
+  "category": "string",
+  "features": "array",
+  "specifications": "object"
+}

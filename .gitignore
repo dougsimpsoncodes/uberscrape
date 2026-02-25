@@ -67,10 +67,10 @@ node_modules/
 # Supabase
 .supabase/
 
-# Outputs
+# Outputs (ignore JSON/CSV in output dirs only)
 output/
 results/
-*.csv
-*.json
-!schemas/*.json
-!examples/*.json
+output/*.json
+output/*.csv
+results/*.json
+results/*.csv
