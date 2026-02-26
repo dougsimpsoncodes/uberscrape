@@ -7,7 +7,7 @@ import httpx
 from typing import List, Dict, Optional, Any
 from playwright.async_api import async_playwright, Browser, Page
 import html2text
-from anthropic import AsyncAnthropic
+from google.generativeai import GenerativeModel, configure
 import json
 from json_repair import repair_json
 
@@ -21,7 +21,7 @@ class WebScraper:
     
     def __init__(
         self,
-        anthropic_key: str,
+        gemini_key: str,
         brave_key: Optional[str] = None,
         use_browser: bool = False,
         timeout: int = 30,
@@ -31,13 +31,17 @@ class WebScraper:
         Initialize the scraper.
         
         Args:
-            anthropic_key: Claude API key for extraction
+            gemini_key: Gemini API key for extraction
             brave_key: Brave Search API key (optional)
             use_browser: Use Playwright for JS rendering (slower but handles dynamic sites)
             timeout: Request timeout in seconds
             max_concurrent: Max parallel requests
         """
-        self.client = AsyncAnthropic(api_key=anthropic_key)
+        configure(api_key=gemini_key)
+        self.model = GenerativeModel(
+            model_name='gemini-2.5-flash',
+            generation_config={'response_mime_type': 'application/json'}
+        )
         self.brave_key = brave_key
         self.use_browser = use_browser
         self.timeout = timeout
@@ -185,7 +189,7 @@ class WebScraper:
         schema: Dict[str, str]
     ) -> Dict[str, Any]:
         """
-        Use Claude to extract structured data from markdown.
+        Use Gemini to extract structured data from markdown.
         
         Args:
             markdown: Page content as markdown
@@ -197,19 +201,15 @@ class WebScraper:
         # Build prompt with explicit schema
         prompt = self._build_extraction_prompt(schema, markdown)
         
-        # Call Claude API
-        response = await self.client.messages.create(
-            model="claude-3-5-sonnet-20241022",
-            max_tokens=2048,
-            temperature=0,  # Deterministic for data extraction
-            messages=[{
-                "role": "user",
-                "content": prompt
-            }]
+        # Call Gemini API (synchronous, run in executor)
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            None,
+            lambda: self.model.generate_content(prompt)
         )
         
-        # Parse response
-        raw_text = response.content[0].text
+        # Parse response (Gemini returns JSON directly with response_mime_type set)
+        raw_text = response.text
         
         try:
             # Try parsing as JSON first
@@ -273,4 +273,4 @@ Extract the data now:"""
 
     async def close(self):
         """Cleanup resources"""
-        await self.client.close()
+        pass  # Gemini doesn't require explicit cleanup

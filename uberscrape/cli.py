@@ -78,9 +78,9 @@ async def _extract(url, urls_file, schema_path, output_path, parallel, use_brows
         return
     
     # Get API key
-    api_key = os.getenv('ANTHROPIC_API_KEY')
+    api_key = os.getenv('GEMINI_API_KEY')
     if not api_key:
-        console.print("[red]Error: ANTHROPIC_API_KEY not found in environment[/red]")
+        console.print("[red]Error: GEMINI_API_KEY not found in environment[/red]")
         console.print("Create a .env file or set the environment variable")
         return
     
@@ -99,7 +99,7 @@ async def _extract(url, urls_file, schema_path, output_path, parallel, use_brows
     
     # Initialize scraper
     scraper = WebScraper(
-        anthropic_key=api_key,
+        gemini_key=api_key,
         use_browser=use_browser,
         timeout=timeout,
         max_concurrent=parallel
