@@ -198,5 +198,57 @@ def schema(schema_name):
     console.print(f"\n[bold]{schema_name} schema:[/bold]\n")
     console.print(json.dumps(schema_data, indent=2))
 
+@cli.command()
+@click.argument('base_url')
+@click.option('--limit', default=50, help='Maximum URLs to discover')
+@click.option('--output', type=click.Path(), help='Save URLs to file')
+def map(base_url, limit, output):
+    """
+    Discover URLs from a website's sitemap.
+    
+    Examples:
+    
+      uberscrape map https://docs.example.com --limit 100
+      uberscrape map https://blog.example.com --output urls.txt
+    """
+    asyncio.run(_map(base_url, limit, output))
+
+async def _map(base_url: str, limit: int, output_path: Optional[str]):
+    """Async sitemap discovery"""
+    from .utils.sitemap import fetch_sitemap_urls
+    
+    console.print(f"\n[bold]Discovering URLs from {base_url}[/bold]\n")
+    
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console
+    ) as progress:
+        task = progress.add_task("Fetching sitemap...", total=None)
+        
+        urls = await fetch_sitemap_urls(base_url, limit=limit)
+        
+        progress.update(task, completed=True)
+    
+    if not urls:
+        console.print("[yellow]No sitemap found or no URLs discovered[/yellow]")
+        return
+    
+    console.print(f"[green]✓ Found {len(urls)} URLs[/green]\n")
+    
+    # Show first 10
+    console.print("[bold]URLs (showing first 10):[/bold]")
+    for url in urls[:10]:
+        console.print(f"  • {url}")
+    
+    if len(urls) > 10:
+        console.print(f"\n  ... and {len(urls) - 10} more")
+    
+    # Save to file
+    if output_path:
+        with open(output_path, 'w') as f:
+            f.write('\n'.join(urls))
+        console.print(f"\n[green]URLs saved to {output_path}[/green]")
+
 if __name__ == '__main__':
     cli()

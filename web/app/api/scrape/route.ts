@@ -13,11 +13,13 @@ export const dynamic = 'force-dynamic';
 interface ScrapeRequest {
   urls: string[];
   schema: Record<string, string>;
+  useBrowser?: boolean;
+  parallel?: number;
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { urls, schema }: ScrapeRequest = await request.json();
+    const { urls, schema, useBrowser = false, parallel = 5 }: ScrapeRequest = await request.json();
 
     if (!urls || urls.length === 0) {
       return NextResponse.json({ error: 'No URLs provided' }, { status: 400 });
@@ -40,11 +42,14 @@ export async function POST(request: NextRequest) {
       // Get project root (parent of web/)
       const projectRoot = join(process.cwd(), '..');
 
-      // Run Python scraper
-      const command = `cd ${projectRoot} && GEMINI_API_KEY="${process.env.GEMINI_API_KEY}" python3 -m uberscrape.cli extract --urls ${urlsFile} --schema ${schemaFile} --output ${outputFile}`;
+      // Build command with options
+      const browserFlag = useBrowser ? '--browser' : '--no-browser';
+      const parallelFlag = `--parallel ${parallel}`;
+      
+      const command = `cd ${projectRoot} && GEMINI_API_KEY="${process.env.GEMINI_API_KEY}" python3 -m uberscrape.cli extract --urls ${urlsFile} --schema ${schemaFile} --output ${outputFile} ${browserFlag} ${parallelFlag}`;
       
       const { stdout, stderr } = await execAsync(command, {
-        timeout: 120000, // 2 minute timeout
+        timeout: 180000, // 3 minute timeout
       });
 
       // Read results

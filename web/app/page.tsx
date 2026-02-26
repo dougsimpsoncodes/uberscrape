@@ -17,6 +17,16 @@ export default function Home() {
   const [schema, setSchema] = useState('{\n  "title": "string",\n  "description": "string"\n}');
   const [results, setResults] = useState<ScrapeResult[]>([]);
   const [processing, setProcessing] = useState(false);
+  const [useBrowser, setUseBrowser] = useState(false);
+  const [parallel, setParallel] = useState(5);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  const schemaTemplates = {
+    'Basic': '{\n  "title": "string",\n  "description": "string"\n}',
+    'Rental Listing': '{\n  "title": "string",\n  "price": "number",\n  "bedrooms": "number",\n  "bathrooms": "number",\n  "sqft": "number",\n  "address": "string",\n  "description": "string"\n}',
+    'Product': '{\n  "name": "string",\n  "price": "number",\n  "brand": "string",\n  "description": "string",\n  "rating": "number",\n  "in_stock": "boolean"\n}',
+    'Article': '{\n  "title": "string",\n  "author": "string",\n  "date": "string",\n  "content": "string",\n  "tags": "array"\n}',
+  };
 
   const handleScrape = async () => {
     setProcessing(true);
@@ -29,7 +39,12 @@ export default function Home() {
       const response = await fetch('/api/scrape', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ urls: urlList, schema: schemaObj }),
+        body: JSON.stringify({ 
+          urls: urlList, 
+          schema: schemaObj,
+          useBrowser,
+          parallel,
+        }),
       });
 
       const data = await response.json();
@@ -142,10 +157,21 @@ export default function Home() {
                   <FileText size={16} />
                   Data Schema (JSON)
                 </label>
+                <div className="mb-2">
+                  <select
+                    onChange={(e) => setSchema(schemaTemplates[e.target.value as keyof typeof schemaTemplates])}
+                    className="bg-gray-900 border border-gray-700 rounded px-3 py-1 text-sm focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="">Quick Templates...</option>
+                    {Object.keys(schemaTemplates).map(name => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </select>
+                </div>
                 <textarea
                   value={schema}
                   onChange={(e) => setSchema(e.target.value)}
-                  className="w-full h-64 bg-gray-900 border border-gray-700 rounded-lg p-4 font-mono text-sm focus:outline-none focus:border-blue-500"
+                  className="w-full h-56 bg-gray-900 border border-gray-700 rounded-lg p-4 font-mono text-sm focus:outline-none focus:border-blue-500"
                   spellCheck={false}
                 />
                 <p className="text-xs text-gray-500 mt-2">
@@ -154,10 +180,49 @@ export default function Home() {
               </div>
             </div>
 
+            {/* Advanced Options */}
+            <div className="mt-6 border-t border-gray-700 pt-6">
+              <button
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="text-sm text-gray-400 hover:text-white flex items-center gap-2"
+              >
+                {showAdvanced ? '▼' : '▶'} Advanced Options
+              </button>
+              
+              {showAdvanced && (
+                <div className="mt-4 grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">
+                      <input
+                        type="checkbox"
+                        checked={useBrowser}
+                        onChange={(e) => setUseBrowser(e.target.checked)}
+                        className="mr-2"
+                      />
+                      Use Browser Mode (handles JavaScript, slower)
+                    </label>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">
+                      Parallel Requests: {parallel}
+                    </label>
+                    <input
+                      type="range"
+                      min="1"
+                      max="10"
+                      value={parallel}
+                      onChange={(e) => setParallel(parseInt(e.target.value))}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button
               onClick={handleScrape}
               disabled={!urls.trim() || processing}
-              className="mt-8 w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-medium py-4 px-6 rounded-lg flex items-center justify-center gap-2 transition-colors"
+              className="mt-6 w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-medium py-4 px-6 rounded-lg flex items-center justify-center gap-2 transition-colors"
             >
               <Upload size={20} />
               Start Scraping
